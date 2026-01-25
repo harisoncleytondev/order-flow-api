@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:16
+    container_name: order-flow-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: postgres
+    ports:
+      - '5432:5432'

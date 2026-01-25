@@ -1,0 +1,233 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  SYSTEM
+}
+
+enum OrderStatus {
+  CREATED
+  RESERVED
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  PAYMENT
+  STATE_CHANGE
+}
+
+//////////////////////
+// AUTH / USERS
+//////////////////////
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  password     String
+  role         UserRole @default(CUSTOMER)
+  isActive     Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  orders        Order[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash     String   @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//////////////////////
+// PRODUCTS / INVENTORY
+//////////////////////
+
+model Product {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory Inventory?
+  orderItems OrderItem[]
+}
+
+model Inventory {
+  id        String @id @default(uuid())
+  productId String @unique
+  quantity  Int
+
+  updatedAt DateTime @updatedAt
+
+  product  Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  reserves InventoryReservation[]
+}
+
+model InventoryReservation {
+  id          String   @id @default(uuid())
+  inventoryId String
+  orderId     String
+  quantity    Int
+  expiresAt   DateTime
+  releasedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@index([orderId])
+}
+
+//////////////////////
+// ORDERS
+//////////////////////
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  status    OrderStatus
+  total     Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+  payments    Payment[]
+  events      OrderEvent[]
+  reservations InventoryReservation[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId  String
+  productId String
+  quantity Int
+  price    Decimal
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderEvent {
+  id        String      @id @default(uuid())
+  orderId  String
+  from     OrderStatus
+  to       OrderStatus
+  reason   String?
+
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+//////////////////////
+// PAYMENTS
+//////////////////////
+
+model Payment {
+  id             String        @id @default(uuid())
+  orderId        String
+  status         PaymentStatus
+  amount         Decimal
+  provider       String
+  idempotencyKey String        @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+//////////////////////
+// NOTIFICATIONS
+//////////////////////
+
+model Notification {
+  id        String @id @default(uuid())
+  userId    String
+  channel   String
+  payload   Json
+  sentAt    DateTime?
+  failedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+//////////////////////
+// AUDIT / OBSERVABILITY
+//////////////////////
+
+model AuditLog {
+  id        String       @id @default(uuid())
+  userId    String?
+  action    AuditAction
+  entity    String
+  entityId  String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
