@@ -13,7 +13,7 @@ describe('UserService Tests', () => {
     service = module.get<UserService>(UserService);
   });
 
-  it('Should be defined', async () => {
+  it('Should be defined', () => {
     expect(service).toBeDefined();
   });
 
