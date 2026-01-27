@@ -25,11 +25,12 @@ export class UserService {
 
   async create(body: CreateUserDTO) {
     const userExists = await this.findOne(body.email);
-    const password = await hash(body.password, 10);
 
     if (userExists) {
       throw new ConflictException('Usuário já existente.');
     }
+
+    const password = await hash(body.password, 10);
 
     const newUser = await prisma.user.create({
       data: { ...body, password: password },
