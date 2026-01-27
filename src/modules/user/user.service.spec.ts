@@ -17,8 +17,9 @@ import { userMock } from '../../testing/user.mock';
 import { prisma } from '../../lib/prisma';
 import { hash } from 'bcrypt';
 import { CreateUserDTO } from './dto/create-user-dto';
+import { ConflictException } from '@nestjs/common';
 
-describe('UserService Tests', () => {
+describe('Testes do UserService', () => {
   let userService: UserService;
 
   beforeAll(async () => {
@@ -29,13 +30,13 @@ describe('UserService Tests', () => {
     userService = module.get<UserService>(UserService);
   });
 
-  it('Should be defined', () => {
+  it('Deve estar definido', () => {
     expect(userService).toBeDefined();
   });
 
   // Método FindOne
 
-  it('Should find user', async () => {
+  it('Deve encontrar o usuário', async () => {
     (prisma.user.findFirst as jest.Mock).mockResolvedValueOnce(userMock);
 
     const result = await userService.findOne(userMock.email);
@@ -46,11 +47,11 @@ describe('UserService Tests', () => {
     expect(result).toEqual(userMock);
   });
 
-  it('Should error not found find user', async () => {
+  it('Deve lançar erro ao não encontrar o usuário', async () => {
     (prisma.user.findFirst as jest.Mock).mockResolvedValueOnce(null);
 
     await expect(userService.findOne('test@test.com')).rejects.toThrow(
-      'Usuário não encontrado',
+      ConflictException,
     );
 
     expect(prisma.user.findFirst).toHaveBeenCalledWith({
@@ -60,7 +61,7 @@ describe('UserService Tests', () => {
 
   // Método Create
 
-  it('Should create user', async () => {
+  it('Deve criar o usuário', async () => {
     jest.spyOn(userService, 'findOne').mockResolvedValueOnce(null);
     (hash as jest.Mock).mockResolvedValueOnce('password-hash');
     (prisma.user.create as jest.Mock).mockResolvedValueOnce(userMock);
@@ -84,7 +85,7 @@ describe('UserService Tests', () => {
     expect(result).toEqual(userMock);
   });
 
-  it('Should error conflict create user', async () => {
+  it('Deve lançar erro de conflito ao criar o usuário', async () => {
     jest.spyOn(userService, 'findOne').mockResolvedValueOnce(userMock);
     (hash as jest.Mock).mockResolvedValueOnce('password-hash');
     (prisma.user.create as jest.Mock).mockResolvedValueOnce(userMock);
@@ -95,8 +96,6 @@ describe('UserService Tests', () => {
       password: '123',
     };
 
-    await expect(userService.create(body)).rejects.toThrow(
-      'Usuário já existente.',
-    );
+    await expect(userService.create(body)).rejects.toThrow(ConflictException);
   });
 });
