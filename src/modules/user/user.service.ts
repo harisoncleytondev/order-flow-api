@@ -24,7 +24,9 @@ export class UserService {
   }
 
   async create(body: CreateUserDTO) {
-    const userExists = await this.findOne(body.email);
+    const userExists = await prisma.user.findFirst({
+      where: { email: body.email },
+    });
 
     if (userExists) {
       throw new ConflictException('Usuário já existente.');
