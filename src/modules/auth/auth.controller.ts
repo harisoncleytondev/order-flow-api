@@ -1,15 +1,20 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthLoginDTO } from './dto/auth-login-dto';
 import { AuthRegisterDTO } from './dto/auth-register-dto';
 import type { CookieOptions, Request, Response } from 'express';
+import { AuthGuard } from '../../guard/auth/auth.guard';
+import { JwtPayload } from '../../decorators/user/jwt.decorator';
+import type { JWTPayloadInterface } from './interfaces/jwt-payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -84,5 +89,19 @@ export class AuthController {
       accessToken,
       refreshToken: newRefreshToken,
     };
+  }
+
+  @Get('/logout')
+  @UseGuards(AuthGuard)
+  async logout(
+    @Res({ passthrough: true }) res: Response,
+    @JwtPayload() payload: JWTPayloadInterface,
+  ) {
+    await this.authServices.logout(payload.email);
+
+    res.clearCookie('accessToken', this.cookieOptions);
+    res.clearCookie('refreshToken', this.cookieOptions);
+
+    return { message: 'Logout realizado com sucesso' };
   }
 }

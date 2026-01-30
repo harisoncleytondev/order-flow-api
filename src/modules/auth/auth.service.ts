@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthLoginDTO } from './dto/auth-login-dto';
 import { AuthRegisterDTO } from './dto/auth-register-dto';
 import { compare } from 'bcrypt';
@@ -41,5 +45,15 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     return this.refreshService.refresh(refreshToken);
+  }
+
+  async logout(email: string) {
+    const user = await this.userService.findOne(email);
+
+    if (!user) {
+      throw new NotFoundException('Conta não encontrada.');
+    }
+
+    return this.refreshService.logout(user);
   }
 }

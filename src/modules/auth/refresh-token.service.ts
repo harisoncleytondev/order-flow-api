@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
@@ -102,5 +106,24 @@ export class RefreshTokenService {
     } catch {
       throw new UnauthorizedException('RefreshToken inválido');
     }
+  }
+
+  async logout(user: User) {
+    const tokenStored = await prisma.refreshToken.findFirst({
+      where: {
+        userId: user.id,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!tokenStored) {
+      throw new NotFoundException('Nenhum token associado a conta.');
+    }
+
+    await prisma.refreshToken.update({
+      where: { id: tokenStored.id },
+      data: { revokedAt: new Date() },
+    });
   }
 }
