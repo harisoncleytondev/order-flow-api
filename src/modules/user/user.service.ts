@@ -6,6 +6,7 @@ import {
 import { prisma } from '../../lib/prisma';
 import { CreateUserDTO } from './dto/create-user-dto';
 import { hash } from 'bcrypt';
+import { UpdateUserDTO } from './dto/update-user-dto';
 
 @Injectable()
 export class UserService {
@@ -13,6 +14,20 @@ export class UserService {
     const userExists = await prisma.user.findFirst({
       where: {
         email: email,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return userExists;
+  }
+
+  async findOneById(id: string) {
+    const userExists = await prisma.user.findFirst({
+      where: {
+        id: id,
       },
     });
 
@@ -39,5 +54,25 @@ export class UserService {
     });
 
     return newUser;
+  }
+
+  async update(id: string, body: UpdateUserDTO) {
+    const userExists = await this.findOneById(id);
+
+    return prisma.user.update({
+      where: { id: userExists.id },
+      data: body,
+    });
+  }
+
+  async delete(id: string) {
+    const userExists = await this.findOneById(id);
+
+    return prisma.user.update({
+      where: { id: userExists.id },
+      data: {
+        isActive: false,
+      },
+    });
   }
 }
